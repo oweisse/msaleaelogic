@@ -72,21 +72,7 @@ classdef SaleaeLogicAnlyzerManager < handle
         function [] = InitLogicConnection( obj, logicHost,  logicPort )
             obj.logicHost                  = logicHost;
             obj.logicPort                  = logicPort;
-            obj.interface                  = tcpip( logicHost, logicPort );
-            obj.interface.InputBufferSize  = 1e5;
-            obj.interface.OutputBufferSize = 1e5;
-            fopen( obj.interface );
-
-            obj.TestConnection();
-        end
-
-        function [everythingOK] = TestConnection( obj )
-            everythingOK = strcmpi( obj.interface.Status, 'open' );
-            if ~everythingOK
-                obj.log.error( obj.MODULE, sprintf( 'TestConnection failed' ) );
-            else
-                obj.log.info( obj.MODULE, 'Successfully tested connection with logic' );
-            end
+            obj.interface                  = tcpclient( logicHost, logicPort );
         end
 
         function [] = SetActiveDigitalChannels( obj, channels )
@@ -191,7 +177,7 @@ classdef SaleaeLogicAnlyzerManager < handle
             end
 
             obj.log.trace( obj.MODULE, sprintf( '>> %s', cmd ) )
-            fwrite( obj.interface, [ cmd, 0 ] );
+            write( obj.interface, uint8([ cmd, 0 ]) );
 
             tic;
             pause(PAUSE_INTERVAL);
@@ -201,15 +187,15 @@ classdef SaleaeLogicAnlyzerManager < handle
             end
 
             if obj.interface.BytesAvailable > 0
-                resultRaw = fread( obj.interface, obj.interface.BytesAvailable );
-                result    = char( resultRaw' );
+                resultRaw = read( obj.interface, obj.interface.BytesAvailable );
+                result    = char( resultRaw );
                 obj.log.trace( obj.MODULE, sprintf('<< %s', result ) );
             end
         end
 
         function delete( obj )
-                fclose( obj.interface );
-                obj.log.info( obj.MODULE, 'Closed interface' );
+            delete( obj.interface );
+            obj.log.info( obj.MODULE, 'Closed interface' );
         end
     end
 
